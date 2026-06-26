@@ -15,6 +15,7 @@ export default function Dashboard() {
     if (session) {
       saveTimezone()
       loadMeetings()
+      checkTrail()
     }
   }, [session])
 
@@ -36,6 +37,19 @@ export default function Dashboard() {
     const res = await fetch("/api/get-meetings")
     const data = await res.json()
     setMeetings(data.meetings || [])
+  }
+  const checkTrial = async () => {
+    const res = await fetch("/api/check-trial")
+    const data = await res.json()
+    if (data.expired) {
+      window.location.href = "/pricing?expired=true"
+    }
+    if (data.daysLeft && data.daysLeft <= 3) {
+      showNotification(
+        `Your trial expires in ${data.daysLeft} day${data.daysLeft === 1 ? "" : "s"} — upgrade now!`,
+        "warning"
+      )
+    }
   }
 
   const scanEmails = async () => {
@@ -89,19 +103,38 @@ export default function Dashboard() {
     <div style={{ background: "#F9FAFB", minHeight: "100vh", fontFamily: "var(--font-sans)" }}>
 
       {/* Notification */}
-      {notification && (
+     {notification && (
         <div style={{
           position: "fixed", top: 20, right: 20, zIndex: 1000,
-          background: notification.type === "error" ? "#FEF2F2" : "#F0FDF4",
-          border: `1px solid ${notification.type === "error" ? "#FECACA" : "#BBF7D0"}`,
-          color: notification.type === "error" ? "#991B1B" : "#166534",
+          background: notification.type === "error" 
+            ? "#FEF2F2" 
+            : notification.type === "warning"
+            ? "#FFFBEB"
+            : "#F0FDF4",
+          border: `1px solid ${
+            notification.type === "error" 
+              ? "#FECACA" 
+              : notification.type === "warning"
+              ? "#FDE68A"
+              : "#BBF7D0"
+          }`,
+          color: notification.type === "error" 
+            ? "#991B1B" 
+            : notification.type === "warning"
+            ? "#92400E"
+            : "#166534",
           padding: "12px 20px", borderRadius: 10, fontSize: 14,
-          fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.1)"
+          fontWeight: 500, boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
+          maxWidth: 360
         }}>
-          {notification.type === "error" ? "⚠️" : "✅"} {notification.msg}
+          {notification.type === "error" 
+            ? "⚠️" 
+            : notification.type === "warning"
+            ? "🕐"
+            : "✅"} {notification.msg}
         </div>
       )}
-
+      
       {/* Top navbar */}
       <div style={{
         background: "#fff", borderBottom: "1px solid #E5E7EB",
