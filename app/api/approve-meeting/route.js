@@ -15,7 +15,15 @@ export async function POST(request) {
     return Response.json({ error: "Not logged in" }, { status: 401 })
   }
 
-  const { meetingId } = await request.json()
+const { meetingId, action } = await request.json()
+
+  if (action === "decline") {
+    await supabase
+      .from("meetings")
+      .update({ status: "declined" })
+      .eq("id", meetingId)
+    return Response.json({ success: true, declined: true })
+  }
 
   try {
     const { data: meeting } = await supabase

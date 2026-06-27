@@ -7,9 +7,46 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 )
 
+async function refreshAccessToken(token) {
+  try {
+    const response = await fetch("https://oauth2.googleapis.com/token", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: new URLSearchParams({
+        client_id: process.env.GOOGLE_CLIENT_ID,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET,
+        grant_type: "refresh_token",
+        refresh_token: token.refreshToken
+      })
+    })
+
+    const refreshed = await response.json()
+
+    if (!response.ok) throw refreshed
+
+    await supabase
+      .from("users")
+      .update({ google_access_token: refreshed.access_token })
+      .eq("email", token.email)
+
+    return {
+      ...token,
+      accessToken: refreshed.access_token,
+      accessTokenExpires: Date.now() + refreshed.expires_in * 1000,
+      refreshToken: refreshed.refresh_token ?? token.refreshToken
+    }
+  } catch (error) {
+    console.error("Refresh token error:", error)
+    return { ...token, error: "RefreshAccessTokenError" }
+  }
+}
+
 export const authOptions = {
   session: {
     strategy: "jwt",
+    maxAge: 30 * 24 * 60 * 60
+  },
+  jwt: {
     maxAge: 30 * 24 * 60 * 60
   },
   providers: [
@@ -27,51 +64,30 @@ export const authOptions = {
   ],
   callbacks: {
     async jwt({ token, account, user }) {
-      if (account) {
-        token.access_token = account.access_token
-        token.refresh_token = account.refresh_token
-        token.expires_at = account.expires_at
-        token.email = user?.email
+      if (account && user) {
+        return {
+          ...token,
+          accessToken: account.access_token,
+          refreshToken: account.refresh_token,
+          accessTokenExpires: account.expires_at * 1000,
+          email: user.email,
+          name: user.name,
+          picture: user.image
+        }
       }
 
-      if (Date.now() < (token.expires_at * 1000) - 60000) {
+      if (Date.now() < token.accessTokenExpires - 60000) {
         return token
       }
 
-      try {
-        const response = await fetch("https://oauth2.googleapis.com/token", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({
-            client_id: process.env.GOOGLE_CLIENT_ID,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET,
-            grant_type: "refresh_token",
-            refresh_token: token.refresh_token
-          })
-        })
-
-        const refreshed = await response.json()
-
-        if (!response.ok) throw refreshed
-
-        await supabase
-          .from("users")
-          .update({ google_access_token: refreshed.access_token })
-          .eq("email", token.email)
-
-        return {
-          ...token,
-          access_token: refreshed.access_token,
-          expires_at: Math.floor(Date.now() / 1000 + refreshed.expires_in)
-        }
-      } catch (error) {
-        console.error("Token refresh error:", error)
-        return { ...token, error: "RefreshTokenError" }
-      }
+      return refreshAccessToken(token)
     },
 
     async session({ session, token }) {
-      session.user.id = token.sub
+      session.user.accessToken = token.accessToken
+      session.user.email = token.email
+      session.user.name = token.name
+      session.user.image = token.picture
       session.error = token.error
       return session
     },
@@ -80,7 +96,7 @@ export const authOptions = {
       try {
         const { data: existingUser } = await supabase
           .from("users")
-          .select("*")
+          .select("id")
           .eq("email", user.email)
           .single()
 
@@ -101,7 +117,8 @@ export const authOptions = {
             .from("users")
             .update({
               google_access_token: account.access_token,
-              google_refresh_token: account.refresh_token
+              google_refresh_token: account.refresh_token,
+              name: user.name
             })
             .eq("email", user.email)
         }
