@@ -1,0 +1,79 @@
+#meetingai-panel {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 280px;
+  height: 100vh;
+  background: #F8FAFC;
+  border-left: 1px solid #E2E8F0;
+  z-index: 99999;
+  display: flex;
+  flex-direction: column;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  box-shadow: -4px 0 20px rgba(0,0,0,0.06);
+}
+
+#meetingai-header {
+  background: linear-gradient(135deg, #4F46E5, #7C3AED);
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+
+#meetingai-content {
+  flex: 1;
+  overflow-y: auto;
+  padding: 14px;
+}
+
+#meetingai-footer {
+  padding: 12px;
+  border-top: 1px solid #E2E8F0;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  background: #fff;
+}
+
+#meetingai-scan {
+  flex: 1;
+  padding: 9px;
+  background: #4F46E5;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#meetingai-scan:disabled {
+  background: #A5B4FC;
+  cursor: not-allowed;
+}
+
+#meetingai-open {
+  padding: 9px 12px;
+  background: #fff;
+  color: #374151;
+  border: 1px solid #E2E8F0;
+  border-radius: 8px;
+  font-size: 12px;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+#meetingai-scan:hover:not(:disabled) {
+  background: #4338CA;
+}
+
+#meetingai-open:hover {
+  background: #F8FAFC;
+}
+
+body {
+  margin-right: 280px !important;
+}
